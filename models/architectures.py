@@ -170,7 +170,13 @@ class CNNLSTM(nn.Module):
         
         if backbone.startswith("resnet"):
             # Remove final FC, keep avgpool
-            self.cnn = nn.Sequential(*list(base_model.children())[:-1])
+            children = list(base_model.children())[:-1]
+            self.cnn = nn.Sequential(*children)
+            # Partially freeze early layers (stem + layer1 + layer2) to prevent overfitting on CCTV
+            if not freeze_backbone:
+                for child in children[:6]:  # conv1, bn1, relu, maxpool, layer1, layer2
+                    for param in child.parameters():
+                        param.requires_grad = False
         elif backbone == "efficientnet_b0":
             self.cnn = nn.Sequential(
                 base_model.features,
