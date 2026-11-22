@@ -63,6 +63,12 @@ def main():
     print(f"  F1-Score:  {m_frozen['f1']*100:.2f}%")
     print(f"  ROC-AUC:   {m_frozen['roc_auc']:.4f}")
     print(f"  False Alarms (FP): {m_frozen['false_positives']} | Missed Fights (FN): {m_frozen['false_negatives']}")
+
+    per_ds = results.get("per_dataset_metrics", {})
+    if len(per_ds) > 1:
+        print(f"\n--- PER-DATASET BREAKDOWN (At Frozen Threshold {frozen_th:.2f}) ---")
+        for ds_k, ds_m in per_ds.items():
+            print(f"  [{ds_k.upper():8s}] Acc: {ds_m['accuracy']*100:5.2f}% | Prec: {ds_m['precision']*100:5.2f}% | Rec: {ds_m['recall']*100:5.2f}% | F1: {ds_m['f1']*100:5.2f}% | AUC: {ds_m['roc_auc']:.4f} | FP: {ds_m['false_positives']:2d} | FN: {ds_m['false_negatives']:2d}")
     print(f"Artifacts saved to: {out_dir}/")
     print(f"========================================================\n")
 

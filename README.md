@@ -1,5 +1,5 @@
-# Suraksha-Net: Real-Time Violence Detection System
-## Module: Advanced Deep Learning Model Development, Temporal Modeling & Evaluation
+# Suraksha-Net: Surveillance Video Violence Detection
+## Module: Deep Learning Model Development, Temporal Modeling & Evaluation
 
 **Module Lead:** Vishnu Bhargava  
 **Collaborators:** Arnav Nehra (Team Lead), Arpit (Deployment & Edge Optimization), Savitoj  
@@ -14,36 +14,36 @@
 
 ## 📌 Executive Summary
 
-**Suraksha-Net** is an automated, real-time surveillance and violence detection system designed to monitor CCTV video streams, detect physical violence or altercations with low latency, and trigger security alerts to on-duty personnel via an Android mobile client.
+**Suraksha-Net** is an automated video surveillance violence detection system designed to monitor CCTV video clips, detect physical violence or altercations with low latency, and trigger security alerts to on-duty personnel via an Android mobile client.
 
-This repository houses the complete deep learning core developed by **Vishnu Bhargava**, encompassing dataset auditing, leakage-free spatio-temporal data loaders, baseline spatial CNNs, the champion **CNN + LSTM** temporal model, cross-dataset transfer evaluation, Grad-CAM explainability, and the deployment handoff package.
+This repository houses the complete deep learning core developed by **Vishnu Bhargava**, encompassing dataset auditing, scene-level stratified data splitting, baseline 2D CNNs, the champion **CNN + LSTM** temporal model, cross-dataset transfer evaluation, Grad-CAM explainability, and the deployment handoff package.
 
 ---
 
 ## 🚀 Key Experimental Results
 
-All experiments were conducted on a local **NVIDIA GeForce RTX 5050 Laptop GPU (8 GB GDDR6, sm_120 Blackwell)** using Automatic Mixed Precision (AMP FP16).
+All experiments were conducted on a local **NVIDIA GeForce RTX 5050 Laptop GPU (8 GB GDDR6, sm_120 Blackwell)** using Automatic Mixed Precision (AMP FP16). All comparative models are trained with identical sequence length (16 frames) and early stopping on validation loss.
 
 | Model Architecture | Dataset | Sequence Length | Parameters | Test Accuracy | Precision | Violence Recall | F1-Score | ROC-AUC | False Positive Rate |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | **VGG16 Baseline** | SFD | 16 frames | 121.7M | 60.42% | 55.81% | **100.00%** | 71.64% | 0.7969 | 79.17% |
 | **EfficientNet-B0** | SFD | 16 frames | **4.66M** | 68.75% | 62.16% | 95.83% | 75.41% | 0.7674 | 58.33% |
 | **CNN + LSTM** | SFD | 16 frames | 12.00M | 72.92% | 72.00% | 75.00% | 73.47% | 0.7969 | 29.17% |
-| **CNN + LSTM (Champion)** | **Combined (SFD + AVD)** | 16 frames | 12.00M | **83.18%** | **87.93%** | **82.26%** | **85.00%** | **0.8885** | **15.56%** |
+| **CNN + LSTM (Champion)** | **Combined (SFD + AVD + RWF)** | 16 frames | 12.00M | **83.00%** | **82.81%** | **89.83%** | **86.18%** | **0.8876** | **21.95%** |
 
-> **Threshold Calibrated Setting ($\tau = 0.40$):**  
-> Calibrating the operational threshold to **0.40** yields **Accuracy: 84.11%**, **Violence Recall: 85.48%**, and **F1-Score: 86.18%**.
+> **Operational Alert Threshold:**  
+> The alert threshold is calibrated strictly on validation data to optimize the operational balance and frozen before evaluation on untouched test videos.
 
 ---
 
-## 🧠 Scientific Highlights & Breakthroughs
+## 🧠 Scientific Highlights & Key Observations
 
-1. **Solving the False Alarm Crisis:**  
-   Static 2D CNNs (e.g. VGG16) evaluate frames in isolation, mistaking innocent fast movements (hugging, dancing, clapping, waving) for violence, resulting in a **79.17% False Positive Rate**. The **CNN + LSTM** models temporal motion across 16 frames, dropping the false alarm rate to **15.56%**.
-2. **Leakage Prevention:**  
-   Enforced strict **video-level splitting** ($70\%$ train, $15\%$ val, $15\%$ test). Random frame shuffling is strictly avoided to prevent temporal contamination.
+1. **Mitigating False Alarms with Temporal Modeling:**  
+   Static 2D CNNs (e.g. VGG16) evaluate frames in isolation, mistaking innocent fast movements (hugging, dancing, clapping, waving) for violence, resulting in high false positive rates. The **CNN + LSTM** models temporal motion across 16 frames, substantially reducing false alarms.
+2. **Scene-Level Data Partitioning:**  
+   Splits are enforced at the scene and source-video level rather than per-clip, ensuring that multiple camera views of the same scene and multiple cuts from the same source video remain in the same split.
 3. **Cross-Dataset Generalization:**  
-   Zero-shot evaluation from outdoor CCTV (SFD) to indoor rooms (AVD) achieved **76.92% precision** with only 3 false alarms on difficult gestures. Unifying the datasets resolved spatial scale variance, boosting overall accuracy to **83.18%**.
+   Domain transfer tests between outdoor CCTV (SFD), multi-camera indoor rooms (AIRTLab/AVD), and YouTube surveillance footage (RWF-2000) quantify the domain gap across surveillance environments.
 4. **Grad-CAM Interpretability:**  
    Gradient-weighted Class Activation Mapping confirms the network focuses on interacting human limbs and grappling contact points rather than static background scenery.
 
@@ -100,7 +100,7 @@ pip install -r requirements.txt
 
 ### 2. Training the Champion Model (CNN + LSTM)
 ```bash
-python train.py --dataset combined --model cnn_lstm --epochs 25 --batch-size 8 --lr 1e-4 --amp
+python train.py --dataset combined --model cnn_lstm --epochs 8 --batch-size 8 --lr 1e-4 --amp
 ```
 
 ### 3. Running Comprehensive Evaluation

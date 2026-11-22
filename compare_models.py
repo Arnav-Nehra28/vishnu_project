@@ -36,10 +36,20 @@ def aggregate_experiment_results(exp_root: str = "experiments", output_file: str
         rec = res.get("metrics_at_recommended_threshold", m)
         rec_th = res.get("recommended_threshold", 0.5)
         
+        model_name = cfg["model"]["name"].upper()
+        if "VGG" in model_name:
+            backbone = "vgg16"
+        elif "EFFICIENT" in model_name:
+            backbone = "efficientnet_b0"
+        elif "R3D" in model_name:
+            backbone = "r3d_18"
+        else:
+            backbone = cfg["model"].get("backbone", "resnet18")
+            
         rows.append({
             "Experiment": os.path.basename(ed),
-            "Model": cfg["model"]["name"].upper(),
-            "Backbone": cfg["model"].get("backbone", "N/A"),
+            "Model": model_name,
+            "Backbone": backbone,
             "Dataset": cfg["dataset"]["name"].upper(),
             "Seq Len": cfg["dataset"]["sequence_length"],
             "Accuracy": f"{m.get('accuracy', 0.0)*100:.2f}%",

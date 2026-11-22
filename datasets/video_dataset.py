@@ -72,7 +72,8 @@ class VideoDataset(Dataset):
                 transforms.Resize((image_size + 16, image_size + 16)),
                 transforms.RandomCrop(image_size),
                 transforms.RandomHorizontalFlip(p=0.5),
-                transforms.ColorJitter(brightness=0.2, contrast=0.2),
+                transforms.RandomRotation(degrees=10),
+                transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std),
             ])
@@ -315,25 +316,31 @@ def build_dataloaders(
     # Check if pre-split manifest files exist in splits/ directory
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     splits_dir = os.path.join(project_root, "splits")
-    manifest_train = os.path.join(splits_dir, f"{ds_name}_train.txt")
-    manifest_val = os.path.join(splits_dir, f"{ds_name}_val.txt")
-    manifest_test = os.path.join(splits_dir, f"{ds_name}_test.txt")
+    manifest_train_csv = os.path.join(splits_dir, f"{ds_name}_train.csv")
+    manifest_train_txt = os.path.join(splits_dir, f"{ds_name}_train.txt")
 
-    if os.path.isfile(manifest_train) and os.path.isfile(manifest_val) and os.path.isfile(manifest_test):
-        logger.info(f"Loading official verified split manifests from {splits_dir}/ for {ds_name}...")
+    if os.path.isfile(manifest_train_csv) or os.path.isfile(manifest_train_txt):
+        logger.info(f"Loading verified split manifests from {splits_dir}/ for {ds_name}...")
         splits = {}
-        for sname, mpath in [("train", manifest_train), ("val", manifest_val), ("test", manifest_test)]:
-            with open(mpath, "r") as mf:
-                m_paths = [line.strip() for line in mf if line.strip()]
-            m_labels = []
-            m_sources = []
-            for mp in m_paths:
-                p_lower = mp.lower()
-                if "non" in p_lower:
-                    m_labels.append(0)
-                else:
-                    m_labels.append(1)
-                m_sources.append(ds_name)
+        for sname in ["train", "val", "test"]:
+            csv_path = os.path.join(splits_dir, f"{ds_name}_{sname}.csv")
+            txt_path = os.path.join(splits_dir, f"{ds_name}_{sname}.txt")
+            m_paths, m_labels, m_sources = [], [], []
+            if os.path.isfile(csv_path):
+                import csv
+                with open(csv_path, "r") as cf:
+                    reader = csv.DictReader(cf)
+                    for row in reader:
+                        m_paths.append(row["absolute_path"])
+                        m_labels.append(int(row["label"]))
+                        m_sources.append(row.get("dataset", ds_name))
+            elif os.path.isfile(txt_path):
+                with open(txt_path, "r") as mf:
+                    m_paths = [line.strip() for line in mf if line.strip()]
+                for mp in m_paths:
+                    p_lower = mp.lower()
+                    m_labels.append(0 if "non" in p_lower else 1)
+                    m_sources.append(ds_name)
             splits[sname] = (m_paths, m_labels, m_sources)
     elif has_presplit:
         # Use existing splits

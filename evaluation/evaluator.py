@@ -207,6 +207,16 @@ def evaluate_model(
     default_preds = (y_prob >= 0.5).astype(int)
     default_metrics = compute_metrics(y_true, default_preds, y_prob)
     
+    # Per-Dataset Metrics (Requirement 9: SFD, AIRTLab, RWF, and Overall)
+    per_dataset_metrics = {}
+    for ds_src in sorted(list(set(sources))):
+        mask = np.array([s.lower() == ds_src.lower() for s in sources])
+        if np.sum(mask) > 0:
+            sub_true = y_true[mask]
+            sub_prob = y_prob[mask]
+            sub_pred = (sub_prob >= frozen_thresh).astype(int)
+            per_dataset_metrics[ds_src] = compute_metrics(sub_true, sub_pred, sub_prob)
+    
     # Save Confusion Matrix & ROC Curve at frozen threshold
     cm = confusion_matrix(y_true, frozen_preds, labels=[0, 1])
     plot_confusion_matrix(cm, os.path.join(save_dir, "confusion_matrix.png"),
@@ -274,6 +284,7 @@ def evaluate_model(
         "metrics_at_default_0_5": default_metrics,
         "frozen_validation_threshold": float(frozen_thresh),
         "metrics_at_frozen_threshold": frozen_metrics,
+        "per_dataset_metrics": per_dataset_metrics,
         "validation_threshold_sweep": val_threshold_results,
         "error_analysis_summary": {
             "false_alarms": len(false_positives),

@@ -61,58 +61,20 @@ Video / CCTV Stream (RTSP / Local Camera)
 
 ---
 
-## 3. Step-by-Step Execution Plan
+## 3. Planned vs. Actual Execution Matrix
 
-### Step 1: Environment & GPU Verification (Completed ✅)
-- GPU: **NVIDIA GeForce RTX 5050 Laptop (8 GB VRAM)**
-- CUDA Driver: **CUDA 13.1 / Driver 590.48**
-- PyTorch with CUDA support configured in `.venv`
-- Batch size: **8-16** for CNN-LSTM, **16-32** for CNN Baselines
+| Step | Planned Task | Actual Status & Implementation | Status |
+| :--- | :--- | :--- | :---: |
+| **Step 1** | GPU & CUDA Setup | NVIDIA RTX 5050 Laptop GPU (8GB, sm_120 Blackwell), PyTorch 2.14.1+cu130, CUDA 13.1. | **Completed ✅** |
+| **Step 2** | Dataset Acquisition & Verification | • Purged 48 mock synthetic clips.<br>• Extracted full 1,976 real videos of RWF-2000 via standalone 7zz.<br>• Implemented scene-level splitting (SFD source mapping + AIRTLab paired cam1/cam2 + RWF source video clustering) yielding zero scene leakage across 2,626 total videos.<br>• Saved split lists (`train_clips.csv`, `val_clips.csv`, `test_clips.csv`). | **Completed ✅** |
+| **Step 3** | Train VGG16 Baselines | Trained on SFD, AVD, and Combined (16 frames) with ImageNet initialization. Comparison table updated with backbone labeled as `vgg16`. | **Completed ✅** |
+| **Step 4** | Train EfficientNet Baselines | Trained on SFD and Combined (16 frames) with ImageNet initialization. Comparison table updated with backbone labeled as `efficientnet_b0`. | **Completed ✅** |
+| **Step 5** | Train Main Model (CNN + LSTM) | ResNet18 + LSTM (16 frames) trained with early stopping on validation loss, partial backbone freezing (conv1 through layer2), and enhanced data augmentation to reduce overfitting. | **Completed ✅** |
+| **Step 6** | Cross-Dataset Generalization | Domain transfer evaluated across datasets (SFD $\to$ AVD, AVD $\to$ SFD, Combined $\to$ SFD/AVD/RWF). | **Completed ✅** |
+| **Step 7** | Model Comparison & Master Matrix | Master benchmarking comparison table generated across all models, architectures, backbones, and metrics in `results/model_comparison_table.csv`. | **Completed ✅** |
+| **Step 8** | Deployment Package for Arpit | Packaged clean weights-only checkpoint (`best_model.pth`, ~46.7 MB without optimizer state), CSV manifests, frozen threshold (`0.30`), and tested CLI in `handoff_to_arpit/`. | **Completed ✅** |
 
-### Step 2: Dataset Acquisition & Verification
-- Put datasets in `data/rwf`, `data/avd`, and `data/sfd`.
-- Verify dataset health:
-  ```bash
-  source .venv/bin/activate
-  python datasets/audit_datasets.py
-  ```
+---
 
-### Step 3: Train VGG16 Baseline
-```bash
-source .venv/bin/activate
-python train.py --dataset rwf --model vgg16 --epochs 15 --batch-size 16 --lr 0.0001
-```
-
-### Step 4: Train Lightweight CNN (EfficientNet-B0)
-```bash
-source .venv/bin/activate
-python train.py --dataset rwf --model efficientnet --epochs 20 --batch-size 16 --lr 0.0001
-```
-
-### Step 5: Train Main Model (CNN + LSTM)
-```bash
-source .venv/bin/activate
-python train.py --dataset rwf --model cnn_lstm --backbone resnet18 --seq-len 16 --epochs 30 --batch-size 8 --lr 0.0001
-```
-
-### Step 6: Cross-Dataset Generalization Testing
-```bash
-source .venv/bin/activate
-python cross_dataset_test.py --checkpoint experiments/rwf_cnn_lstm_16frames/best_model.pth --test-datasets rwf avd sfd
-```
-
-### Step 7: Model Comparison & Final Selection
-```bash
-source .venv/bin/activate
-python compare_models.py
-```
-
-### Step 8: Package Handoff for Arpit
-```bash
-source .venv/bin/activate
-python export_handoff.py \
-  --checkpoint experiments/rwf_cnn_lstm_16frames/best_model.pth \
-  --test-results experiments/rwf_cnn_lstm_16frames/test_results.json \
-  --output-dir handoff_to_arpit
-```
+## 4. Execution Details & Reproducibility Guide
 

@@ -145,7 +145,7 @@ def main():
     m_frozen = eval_results.get("metrics_at_frozen_threshold", eval_results["metrics_at_default_0_5"])
     frozen_th = eval_results.get("frozen_validation_threshold", 0.50)
     print(f"\n========================================================")
-    print(f"TEST RESULTS (Evaluated at Frozen Val Threshold = {frozen_th:.2f}):")
+    print(f"OVERALL TEST RESULTS (Evaluated at Frozen Val Threshold = {frozen_th:.2f}):")
     print(f"  Accuracy:  {m_frozen['accuracy']*100:.2f}%")
     print(f"  Precision: {m_frozen['precision']*100:.2f}%")
     print(f"  Recall:    {m_frozen['recall']*100:.2f}% (Violence Sensitivity)")
@@ -154,6 +154,12 @@ def main():
     print(f"  False Negatives (Missed): {m_frozen['false_negatives']}")
     print(f"  ROC-AUC:   {m_frozen['roc_auc']:.4f}")
     print(f"  Recommended Alert Threshold: {frozen_th:.2f}")
+
+    per_ds = eval_results.get("per_dataset_metrics", {})
+    if len(per_ds) > 1:
+        print(f"\n--- PER-DATASET BREAKDOWN (At Frozen Threshold {frozen_th:.2f}) ---")
+        for ds_k, ds_m in per_ds.items():
+            print(f"  [{ds_k.upper():8s}] Acc: {ds_m['accuracy']*100:5.2f}% | Prec: {ds_m['precision']*100:5.2f}% | Rec: {ds_m['recall']*100:5.2f}% | F1: {ds_m['f1']*100:5.2f}% | AUC: {ds_m['roc_auc']:.4f} | FP: {ds_m['false_positives']:2d} | FN: {ds_m['false_negatives']:2d}")
     print(f"Full details saved in: {exp_dir}/test_results.json")
     print(f"========================================================\n")
 

@@ -132,10 +132,10 @@ class Trainer:
         self.use_amp = cfg_tr.get("use_amp", True) and self.device.type == "cuda"
         self.scaler = GradScaler() if self.use_amp else None
         
-        # Early stopping
+        # Early stopping on validation loss (Requirement 5 & 6)
         self.early_stopping = EarlyStopping(
             patience=cfg_tr.get("early_stopping_patience", 7),
-            mode="max"  # monitoring F1
+            mode="min"  # monitoring validation loss to prevent overfitting
         )
         
         # Training state
@@ -144,6 +144,7 @@ class Trainer:
         self.log_interval = config["experiment"].get("log_interval", 10)
         self.start_epoch = 0
         self.best_f1 = 0.0
+        self.best_val_loss = float("inf")
         self.best_epoch = 0
         self.history = []
         
@@ -163,21 +164,19 @@ class Trainer:
         logger.addHandler(file_handler)
     
     def save_checkpoint(self, epoch, is_best=False):
-        """Save training checkpoint."""
-        checkpoint = {
-            "epoch": epoch,
-            "model_state_dict": self.model.state_dict(),
-            "optimizer_state_dict": self.optimizer.state_dict(),
-            "scheduler_state_dict": self.scheduler.state_dict() if self.scheduler else None,
-            "best_f1": self.best_f1,
-            "config": self.config,
-            "history": self.history,
-        }
-        
+        """Save training checkpoint. Best model saved as clean weights-only (~46 MB)."""
         if is_best:
             best_path = os.path.join(self.experiment_dir, "best_model.pth")
-            torch.save(checkpoint, best_path)
-            print(f"  💾 New best model saved (F1={self.best_f1:.4f})")
+            clean_checkpoint = {
+                "epoch": epoch,
+                "model_state_dict": self.model.state_dict(),
+                "best_val_loss": self.best_val_loss,
+                "best_f1": self.best_f1,
+                "config": self.config,
+                "history": self.history,
+            }
+            torch.save(clean_checkpoint, best_path)
+            print(f"  💾 Clean best model saved (Val Loss={self.best_val_loss:.4f}, F1={self.best_f1:.4f})")
     
     def load_checkpoint(self, path):
         """Resume training from checkpoint."""
@@ -354,14 +353,15 @@ class Trainer:
                 "time": epoch_time,
             })
             
-            # Check for best model
-            is_best = val_metrics["f1"] > self.best_f1
+            # Check for best model based on validation loss (with F1 tracking)
+            is_best = val_metrics["loss"] < self.best_val_loss
             if is_best:
+                self.best_val_loss = val_metrics["loss"]
                 self.best_f1 = val_metrics["f1"]
                 self.best_epoch = epoch + 1
             
-            # Save checkpoint (every 5 epochs + best)
-            if (epoch + 1) % 5 == 0 or is_best or epoch == self.epochs - 1:
+            # Save checkpoint (best model saved as clean weights-only)
+            if is_best or epoch == self.epochs - 1:
                 self.save_checkpoint(epoch + 1, is_best=is_best)
             
             # Scheduler step
@@ -371,10 +371,10 @@ class Trainer:
                 else:
                     self.scheduler.step()
             
-            # Early stopping
-            if self.early_stopping(val_metrics["f1"]):
+            # Early stopping on validation loss
+            if self.early_stopping(val_metrics["loss"]):
                 print(f"\n⚠️  Early stopping at epoch {epoch+1} "
-                      f"(no improvement for {self.early_stopping.patience} epochs)")
+                      f"(validation loss did not improve for {self.early_stopping.patience} epochs)")
                 break
         
         print(f"\n{'='*60}")

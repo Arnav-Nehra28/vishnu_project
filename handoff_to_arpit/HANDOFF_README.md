@@ -17,11 +17,27 @@ python run_inference.py --video path/to/cctv_clip.mp4
 python run_inference.py --video path/to/cctv_clip.mp4 --threshold 0.30 --device cuda
 ```
 
-### Example Real Output:
+### Example Real Output (Non-Violent Activity Clip):
 ```json
 {
   "status": "success",
-  "video": "/absolute/path/to/cctv_clip.mp4",
+  "video": "/home/arnav/Documents/vishnu project/data/avd/NonViolence/avd_nonviolent_cam2_1.mp4",
+  "total_video_frames": 158,
+  "prediction": "Non-Violence",
+  "violence_probability": 0.0388,
+  "non_violence_probability": 0.9612,
+  "alert_triggered": false,
+  "alert_threshold": 0.30,
+  "device_used": "cuda"
+}
+```
+
+### Example Real Output (Violent Altercation Clip):
+```json
+{
+  "status": "success",
+  "video": "/home/arnav/Documents/vishnu project/data/sfd/Violence/fi001.mp4",
+  "total_video_frames": 64,
   "prediction": "Violence",
   "violence_probability": 0.9424,
   "non_violence_probability": 0.0576,
@@ -57,25 +73,38 @@ python run_inference.py --video path/to/cctv_clip.mp4 --threshold 0.30 --device 
 
 ## 4. Final Benchmark Performance Metrics (Held-Out Test Set)
 
-Evaluated on untouched test videos (100 multi-camera surveillance clips):
+Evaluated on untouched test videos across all three datasets (510 total surveillance clips: 400 RWF-2000, 54 AIRTLab/AVD, 56 SFD):
+
+### Overall Combined Metrics (At Frozen Threshold $\tau = 0.30$):
 
 | Metric | Score | Operational Significance |
 | :--- | :---: | :--- |
-| **Accuracy** | **83.00%** | Overall correct classifications |
-| **Precision** | **82.81%** | Reliability of raised alarms |
-| **Violence Recall (Sensitivity)** | **89.83%** | Catch rate for real violent incidents |
-| **F1-Score** | **86.18%** | Harmonic balance between alarm purity and detection |
-| **ROC-AUC** | **0.8876** | Discriminative power across all thresholds |
-| **False Alarms (FP)** | 11 clips | Non-violent clips flagged due to rapid motion/running |
-| **Missed Fights (FN)** | 6 clips | Subtle scuffles or low-contrast night conditions |
+| **Accuracy** | **74.12%** | Overall correct classifications across all environments |
+| **Precision** | **69.03%** | Purity of generated high-priority alarms |
+| **Violence Recall (Sensitivity)** | **91.35%** | Caught 243 out of 266 real violent altercations |
+| **F1-Score** | **78.64%** | Harmonic balance between alarm purity and safety critical detection |
+| **ROC-AUC** | **0.8203** | Discriminative separation across thresholds |
+| **False Alarms (FP)** | 109 clips | Non-violent clips flagged due to rapid motion/running |
+| **Missed Fights (FN)** | 23 clips | Subtle scuffles or low-contrast night conditions |
+
+### Per-Dataset Performance Breakdown:
+
+| Dataset | Test Clips | Accuracy | Precision | Recall (Sensitivity) | F1-Score | ROC-AUC | False Alarms | Missed Fights |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **AIRTLab (AVD)** | 54 | 74.07% | 72.00% | **100.00%** | 83.72% | 0.9059 | 14 | **0** |
+| **RWF-2000** | 400 | 75.75% | 70.52% | 88.50% | 78.49% | 0.8318 | 74 | 23 |
+| **SFD** | 56 | 62.50% | 58.82% | **100.00%** | 74.07% | 0.7962 | 21 | **0** |
 
 ---
 
 ## 5. File Manifest
-- `best_model.pth`: PyTorch state dictionary and architecture configuration (`137 MB`)
-- `run_inference.py`: Production-ready inference runner (zero extra external dependencies)
-- `model_config.json`: Full architecture hyperparameters (ResNet18, 512 feat dim, 256 LSTM hidden, 1 layer)
+- `best_model.pth`: Clean PyTorch state dictionary (`46 MB`, weights-only without optimizer state)
+- `run_inference.py`: Production-ready inference runner (loads weights, processes video, returns JSON)
+- `train_clips.csv`: Complete training split manifest (1,801 clips)
+- `val_clips.csv`: Complete validation split manifest (315 clips)
+- `test_clips.csv`: Complete held-out test split manifest (510 clips)
+- `model_config.json`: Architecture specifications (ResNet18, 512 feat dim, 256 LSTM hidden, 1 layer)
 - `preprocessing_config.json`: Normalization mean/std, tensor dimensions, and frame sampling parameters
 - `class_mapping.json`: Integer to string class mapping dictionary
-- `recommended_threshold.json`: Calibrated validation alert threshold and security justification
+- `recommended_threshold.json`: Calibrated validation alert threshold (`0.30`) and complete metrics
 - `VISHNU_WORK_COMPREHENSIVE_REPORT.pdf`: Complete 12-page defense report and experimental documentation

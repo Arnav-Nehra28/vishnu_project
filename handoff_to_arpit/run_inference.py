@@ -12,7 +12,7 @@ import os
 import sys
 import json
 import argparse
-from typing import List
+from typing import List, Tuple
 
 import cv2
 import numpy as np
@@ -54,7 +54,7 @@ class CNNLSTMInference(nn.Module):
         return logits
 
 
-def preprocess_video(video_path: str, seq_len: int = 16, img_size: int = 224) -> torch.Tensor:
+def preprocess_video(video_path: str, seq_len: int = 16, img_size: int = 224) -> Tuple[torch.Tensor, int]:
     """Extract frames uniformly, resize, convert RGB, and normalize."""
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -98,7 +98,7 @@ def preprocess_video(video_path: str, seq_len: int = 16, img_size: int = 224) ->
 
     # (T, C, H, W) -> (1, T, C, H, W)
     tensor = torch.FloatTensor(np.array(processed)).unsqueeze(0)
-    return tensor
+    return tensor, n_frames
 
 
 def load_model(weights_path: str, device: torch.device) -> nn.Module:
@@ -113,9 +113,14 @@ def load_model(weights_path: str, device: torch.device) -> nn.Module:
 
 
 def main():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_weights = os.path.join(script_dir, "best_model.pth")
+    if not os.path.isfile(default_weights) and os.path.isfile("best_model.pth"):
+        default_weights = "best_model.pth"
+
     parser = argparse.ArgumentParser(description="Suraksha-Net Inference Runner")
     parser.add_argument("--video", type=str, required=True, help="Path to input video (.mp4, .avi)")
-    parser.add_argument("--weights", type=str, default="best_model.pth", help="Path to best_model.pth")
+    parser.add_argument("--weights", type=str, default=default_weights, help="Path to best_model.pth")
     parser.add_argument("--threshold", type=float, default=0.30, help="Alert threshold (default: 0.30 from validation tuning)")
     parser.add_argument("--device", type=str, default="auto", choices=["auto", "cuda", "cpu"])
     args = parser.parse_args()
@@ -129,7 +134,8 @@ def main():
     model = load_model(args.weights, device)
 
     # Preprocess Video
-    video_tensor = preprocess_video(args.video, seq_len=16, img_size=224).to(device)
+    video_tensor, total_frames = preprocess_video(args.video, seq_len=16, img_size=224)
+    video_tensor = video_tensor.to(device)
 
     # Predict
     with torch.no_grad():
@@ -144,6 +150,7 @@ def main():
     result = {
         "status": "success",
         "video": os.path.abspath(args.video),
+        "total_video_frames": total_frames,
         "prediction": label,
         "violence_probability": round(prob_violence, 4),
         "non_violence_probability": round(prob_nonviolence, 4),
@@ -161,3 +168,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

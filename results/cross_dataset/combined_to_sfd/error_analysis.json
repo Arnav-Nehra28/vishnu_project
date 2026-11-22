@@ -1,54 +1,90 @@
 {
   "evaluation_protocol": "Validation-Tuned Frozen Alert Threshold",
   "frozen_alert_threshold": 0.5,
-  "total_test_samples": 46,
-  "false_alarm_count": 6,
-  "missed_fight_count": 5,
-  "false_alarm_rate_percent": 26.09,
-  "missed_fight_rate_percent": 21.74,
+  "total_test_samples": 56,
+  "false_alarm_count": 19,
+  "missed_fight_count": 0,
+  "false_alarm_rate_percent": 73.08,
+  "missed_fight_rate_percent": 0.0,
   "reviewed_false_alarms": [
     {
-      "video_name": "nofi001.mp4",
+      "video_name": "nofi029.mp4",
       "dataset_source": "sfd",
       "actual_label": 0,
       "predicted_label": 1,
-      "violence_probability": 0.88,
+      "violence_probability": 0.7796,
       "failure_type": "False Alarm (Type I Error)",
       "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
     },
     {
-      "video_name": "nofi005.mp4",
+      "video_name": "nofi030.mp4",
       "dataset_source": "sfd",
       "actual_label": 0,
       "predicted_label": 1,
-      "violence_probability": 0.7331,
+      "violence_probability": 0.8053,
       "failure_type": "False Alarm (Type I Error)",
       "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
     },
     {
-      "video_name": "nofi015.mp4",
+      "video_name": "nofi031.mp4",
       "dataset_source": "sfd",
       "actual_label": 0,
       "predicted_label": 1,
-      "violence_probability": 0.9044,
+      "violence_probability": 0.6976,
       "failure_type": "False Alarm (Type I Error)",
       "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
     },
     {
-      "video_name": "nofi028.mp4",
+      "video_name": "nofi032.mp4",
       "dataset_source": "sfd",
       "actual_label": 0,
       "predicted_label": 1,
-      "violence_probability": 0.961,
+      "violence_probability": 0.7007,
       "failure_type": "False Alarm (Type I Error)",
       "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
     },
     {
-      "video_name": "nofi096.mp4",
+      "video_name": "nofi033.mp4",
       "dataset_source": "sfd",
       "actual_label": 0,
       "predicted_label": 1,
-      "violence_probability": 0.8463,
+      "violence_probability": 0.7613,
+      "failure_type": "False Alarm (Type I Error)",
+      "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
+    },
+    {
+      "video_name": "nofi118.mp4",
+      "dataset_source": "sfd",
+      "actual_label": 0,
+      "predicted_label": 1,
+      "violence_probability": 0.6509,
+      "failure_type": "False Alarm (Type I Error)",
+      "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
+    },
+    {
+      "video_name": "nofi119.mp4",
+      "dataset_source": "sfd",
+      "actual_label": 0,
+      "predicted_label": 1,
+      "violence_probability": 0.586,
+      "failure_type": "False Alarm (Type I Error)",
+      "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
+    },
+    {
+      "video_name": "nofi123.mp4",
+      "dataset_source": "sfd",
+      "actual_label": 0,
+      "predicted_label": 1,
+      "violence_probability": 0.6182,
+      "failure_type": "False Alarm (Type I Error)",
+      "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
+    },
+    {
+      "video_name": "nofi124.mp4",
+      "dataset_source": "sfd",
+      "actual_label": 0,
+      "predicted_label": 1,
+      "violence_probability": 0.7981,
       "failure_type": "False Alarm (Type I Error)",
       "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
     },
@@ -57,56 +93,10 @@
       "dataset_source": "sfd",
       "actual_label": 0,
       "predicted_label": 1,
-      "violence_probability": 0.8483,
+      "violence_probability": 0.7549,
       "failure_type": "False Alarm (Type I Error)",
       "root_cause_explanation": "Fast movement/occlusion/camera shake resembling fighting dynamics"
     }
   ],
-  "reviewed_missed_fights": [
-    {
-      "video_name": "fi002.mp4",
-      "dataset_source": "sfd",
-      "actual_label": 1,
-      "predicted_label": 0,
-      "violence_probability": 0.1004,
-      "failure_type": "Missed Fight (Type II Error)",
-      "root_cause_explanation": "Low motion amplitude, subtle wrestling or poor lighting"
-    },
-    {
-      "video_name": "fi058.mp4",
-      "dataset_source": "sfd",
-      "actual_label": 1,
-      "predicted_label": 0,
-      "violence_probability": 0.4013,
-      "failure_type": "Missed Fight (Type II Error)",
-      "root_cause_explanation": "Low motion amplitude, subtle wrestling or poor lighting"
-    },
-    {
-      "video_name": "fi071.mp4",
-      "dataset_source": "sfd",
-      "actual_label": 1,
-      "predicted_label": 0,
-      "violence_probability": 0.3304,
-      "failure_type": "Missed Fight (Type II Error)",
-      "root_cause_explanation": "Low motion amplitude, subtle wrestling or poor lighting"
-    },
-    {
-      "video_name": "fi072.mp4",
-      "dataset_source": "sfd",
-      "actual_label": 1,
-      "predicted_label": 0,
-      "violence_probability": 0.0941,
-      "failure_type": "Missed Fight (Type II Error)",
-      "root_cause_explanation": "Low motion amplitude, subtle wrestling or poor lighting"
-    },
-    {
-      "video_name": "fi140.mp4",
-      "dataset_source": "sfd",
-      "actual_label": 1,
-      "predicted_label": 0,
-      "violence_probability": 0.0992,
-      "failure_type": "Missed Fight (Type II Error)",
-      "root_cause_explanation": "Low motion amplitude, subtle wrestling or poor lighting"
-    }
-  ]
+  "reviewed_missed_fights": []
 }
