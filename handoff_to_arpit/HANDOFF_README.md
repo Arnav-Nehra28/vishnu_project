@@ -98,13 +98,27 @@ Evaluated on untouched test videos across all three datasets (510 total surveill
 ---
 
 ## 5. File Manifest
+
+### Model & Runtime Code:
 - `best_model.pth`: Clean PyTorch state dictionary (`46 MB`, weights-only without optimizer state)
 - `run_inference.py`: Production-ready inference runner (loads weights, processes video, returns JSON)
-- `train_clips.csv`: Complete training split manifest (1,801 clips)
-- `val_clips.csv`: Complete validation split manifest (315 clips)
-- `test_clips.csv`: Complete held-out test split manifest (510 clips)
 - `model_config.json`: Architecture specifications (ResNet18, 512 feat dim, 256 LSTM hidden, 1 layer)
 - `preprocessing_config.json`: Normalization mean/std, tensor dimensions, and frame sampling parameters
-- `class_mapping.json`: Integer to string class mapping dictionary
-- `recommended_threshold.json`: Calibrated validation alert threshold (`0.30`) and complete metrics
+- `class_mapping.json`: Integer to string class mapping dictionary (`0 = Non-Violence`, `1 = Violence`)
+
+### Verification & Evaluation Results:
+- `test_results.json`: Full test evaluation output, overall and per-dataset metrics, and validation sweep
+- `recommended_threshold.json`: Calibrated validation alert threshold (`0.30`) with deployment rule and metrics
+- `error_analysis.json`: Detailed review of false alarms (FP) and missed fights (FN) with root-cause explanations
+- `model_comparison_table.csv`: Master benchmark comparison table across VGG16, EfficientNet, and CNN-LSTM
+- `generalization_matrix.csv`: Cross-dataset zero-shot transfer results (Combined $\to$ RWF, AVD, SFD)
+- `training_metrics.csv`: Per-epoch convergence log (train/val loss, accuracy, precision, recall, F1, lr)
+- `confusion_matrix.png` & `roc_curve.png`: Evaluation diagnostic plots at the frozen threshold
+- `loss_curve.png` & `accuracy_f1_curve.png`: Training convergence and validation dynamics
+- `gradcam/`: Visual heatmaps for true positive, true negative, false positive, and false negative predictions
+
+### Data Manifests & Documentation:
+- `train_clips.csv`: Complete training split manifest (1,801 clips across SFD, AVD, and RWF)
+- `val_clips.csv`: Complete validation split manifest (315 clips)
+- `test_clips.csv`: Complete held-out test split manifest (510 clips)
 - `VISHNU_WORK_COMPREHENSIVE_REPORT.pdf`: Complete 12-page defense report and experimental documentation
