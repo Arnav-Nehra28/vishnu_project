@@ -138,19 +138,22 @@ def main():
         test_loader=test_loader,
         device=trainer.device,
         save_dir=exp_dir,
-        thresholds=config["evaluation"].get("thresholds", [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+        val_loader=val_loader,
+        thresholds=config["evaluation"].get("thresholds", [0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80])
     )
     
-    m = eval_results["metrics_at_default_0_5"]
+    m_frozen = eval_results.get("metrics_at_frozen_threshold", eval_results["metrics_at_default_0_5"])
+    frozen_th = eval_results.get("frozen_validation_threshold", 0.50)
     print(f"\n========================================================")
-    print(f"TEST RESULTS SUMMARY (Default Threshold = 0.50):")
-    print(f"  Accuracy:  {m['accuracy']*100:.2f}%")
-    print(f"  Precision: {m['precision']*100:.2f}%")
-    print(f"  Recall:    {m['recall']*100:.2f}% (Violence Sensitivity)")
-    print(f"  F1-Score:  {m['f1']*100:.2f}%")
-    print(f"  ROC-AUC:   {m['roc_auc']:.4f}")
-    print(f"  False Positives: {m['false_positives']} | False Negatives: {m['false_negatives']}")
-    print(f"Recommended Deployment Threshold: {eval_results['recommended_threshold']:.2f}")
+    print(f"TEST RESULTS (Evaluated at Frozen Val Threshold = {frozen_th:.2f}):")
+    print(f"  Accuracy:  {m_frozen['accuracy']*100:.2f}%")
+    print(f"  Precision: {m_frozen['precision']*100:.2f}%")
+    print(f"  Recall:    {m_frozen['recall']*100:.2f}% (Violence Sensitivity)")
+    print(f"  F1-Score:  {m_frozen['f1']*100:.2f}%")
+    print(f"  False Positives (Alarms): {m_frozen['false_positives']}")
+    print(f"  False Negatives (Missed): {m_frozen['false_negatives']}")
+    print(f"  ROC-AUC:   {m_frozen['roc_auc']:.4f}")
+    print(f"  Recommended Alert Threshold: {frozen_th:.2f}")
     print(f"Full details saved in: {exp_dir}/test_results.json")
     print(f"========================================================\n")
 

@@ -39,3 +39,4 @@ data/*
 
 # Task logs & temporary runfiles
 *.log
+

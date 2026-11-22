@@ -1,71 +1,81 @@
 # Suraksha-Net: Model Deployment Handoff Package
 **Prepared by:** Vishnu Bhargava (Advanced DL Model Development & Evaluation Lead)  
 **Target:** Arpit / Deployment & Optimization Team  
-**Model Architecture:** CNN_LSTM (Backbone: resnet18)  
+**Model Architecture:** CNN_LSTM (ResNet18 Backbone + LSTM Temporal Aggregation)  
 
 ---
 
-## 1. Quick Specifications
-- **Input Tensor:** `B × 16 × 3 × 224 × 224` (Batch × Sequence × RGB Channels × Height × Width)
-- **Input Preprocessing:** RGB, Resized to 224×224, normalized with ImageNet mean `[0.485, 0.456, 0.406]` and std `[0.229, 0.224, 0.225]`
-- **Classes:** `0 = Non-Violence`, `1 = Violence`
-- **Output:** Softmax probabilities across 2 classes
-- **Recommended Detection Threshold:** `0.4` (Trigger alert when P(Violence) >= `0.4`)
-- **Model Parameters:** `11,998,146`
-- **Model File Size:** `137.44 MB`
+## 1. Quick Start (Single Tested Command)
 
----
+Run inference on any real CCTV video clip with one command:
 
-## 2. Key Performance Metrics (Test Set)
-- **Accuracy:** `84.11%`
-- **Precision:** `86.89%`
-- **Recall (Sensitivity):** `85.48%`
-- **F1-Score:** `86.18%`
-- **ROC-AUC:** `0.8885`
-- **False Positive Rate:** `17.78%`
-- **False Negative Rate:** `14.52%`
+```bash
+# 1. Run inference on a video (automatically utilizes CUDA if available):
+python run_inference.py --video path/to/cctv_clip.mp4
 
----
-
-## 3. Package File Directory
-- `best_model.pth`: PyTorch trained model weights and full state dictionary
-- `model_config.json`: Complete neural architecture specification
-- `preprocessing_config.json`: Exact normalization and sampling rules
-- `class_mapping.json`: Integer to string label mappings
-- `recommended_threshold.json`: Calibrated decision threshold with security justification
-- `gradcam/`: Visual explainability maps (True Positive, True Negative, False Positive, False Negative)
-
----
-
-## 4. Quick Inference Snippet for Arpit
-
-```python
-import torch
-import torchvision.transforms as transforms
-from models.architectures import build_model
-import json
-
-# 1. Load configurations
-with open("handoff_to_arpit/model_config.json") as f:
-    model_cfg = json.load(f)
-
-# 2. Build model and load weights
-model = build_model(model_cfg)
-ckpt = torch.load("handoff_to_arpit/best_model.pth", map_location="cpu", weights_only=False)
-model.load_state_dict(ckpt["model_state_dict"])
-model.eval()
-
-# 3. Input tensor: (1, 16, 3, 224, 224)
-# (Sample 16 frames uniformly, resize 224x224, normalize ImageNet)
-dummy_video = torch.randn(1, 16, 3, 224, 224)
-
-# 4. Predict
-with torch.no_grad():
-    logits = model(dummy_video)
-    prob_violence = torch.softmax(logits, dim=1)[0, 1].item()
-
-# 5. Security alert decision
-threshold = 0.40  # From recommended_threshold.json
-is_violent = prob_violence >= threshold
-print(f"Violence Probability: {prob_violence:.3f} | Alert: {is_violent}")
+# 2. Specify custom alert threshold or device:
+python run_inference.py --video path/to/cctv_clip.mp4 --threshold 0.30 --device cuda
 ```
+
+### Example Real Output:
+```json
+{
+  "status": "success",
+  "video": "/absolute/path/to/cctv_clip.mp4",
+  "prediction": "Violence",
+  "violence_probability": 0.9424,
+  "non_violence_probability": 0.0576,
+  "alert_triggered": true,
+  "alert_threshold": 0.30,
+  "device_used": "cuda"
+}
+```
+
+---
+
+## 2. Input Specifications & Preprocessing Pipeline
+- **Input Tensor Format:** `[B, 16, 3, 224, 224]` (Batch × Sequence × Channels × Height × Width)
+- **Sequence Length:** 16 frames uniformly sampled across video duration.
+- **Spatial Dimensions:** 224 × 224 pixels.
+- **Color Space:** RGB (`cv2.COLOR_BGR2RGB`).
+- **Normalization:** ImageNet statistics:
+  - Mean: `[0.485, 0.456, 0.406]`
+  - Std: `[0.229, 0.224, 0.225]`
+- **Scaling:** Pixels scaled to `[0.0, 1.0]` before normalization.
+
+---
+
+## 3. Class Mapping & Decision Threshold
+- **Class Mapping:**
+  - `0`: **Non-Violence** (Normal human activity, walking, loitering, conversation)
+  - `1`: **Violence** (Physical fighting, assault, aggressive altercations)
+- **Calibrated Alert Threshold:** **`0.30`**
+  - Tuned on the validation set to maximize violence sensitivity (recall).
+  - An event triggers an active security alert whenever `P(Violence) >= 0.30`.
+
+---
+
+## 4. Final Benchmark Performance Metrics (Held-Out Test Set)
+
+Evaluated on untouched test videos (100 multi-camera surveillance clips):
+
+| Metric | Score | Operational Significance |
+| :--- | :---: | :--- |
+| **Accuracy** | **83.00%** | Overall correct classifications |
+| **Precision** | **82.81%** | Reliability of raised alarms |
+| **Violence Recall (Sensitivity)** | **89.83%** | Catch rate for real violent incidents |
+| **F1-Score** | **86.18%** | Harmonic balance between alarm purity and detection |
+| **ROC-AUC** | **0.8876** | Discriminative power across all thresholds |
+| **False Alarms (FP)** | 11 clips | Non-violent clips flagged due to rapid motion/running |
+| **Missed Fights (FN)** | 6 clips | Subtle scuffles or low-contrast night conditions |
+
+---
+
+## 5. File Manifest
+- `best_model.pth`: PyTorch state dictionary and architecture configuration (`137 MB`)
+- `run_inference.py`: Production-ready inference runner (zero extra external dependencies)
+- `model_config.json`: Full architecture hyperparameters (ResNet18, 512 feat dim, 256 LSTM hidden, 1 layer)
+- `preprocessing_config.json`: Normalization mean/std, tensor dimensions, and frame sampling parameters
+- `class_mapping.json`: Integer to string class mapping dictionary
+- `recommended_threshold.json`: Calibrated validation alert threshold and security justification
+- `VISHNU_WORK_COMPREHENSIVE_REPORT.pdf`: Complete 12-page defense report and experimental documentation

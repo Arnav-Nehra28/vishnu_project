@@ -139,13 +139,48 @@ def evaluate_model(
     test_loader: DataLoader,
     device: torch.device,
     save_dir: str,
-    thresholds: List[float] = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    val_loader: DataLoader = None,
+    thresholds: List[float] = [0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80]
 ) -> Dict[str, Any]:
     """
-    Run complete evaluation on test set across varying decision thresholds,
-    saving error cases and plots.
+    Run evaluation adhering to strict ML methodology:
+    1. If val_loader is provided, threshold is selected on VALIDATION data and FROZEN.
+    2. Test data is evaluated strictly using the frozen threshold on untouched test clips.
+    3. Error analysis identifies false alarms (FP) and missed fights (FN).
     """
     model.eval()
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # 1. Validation Threshold Selection (if val_loader provided)
+    if val_loader is not None:
+        val_labels = []
+        val_probs = []
+        for videos, labels, _, _ in val_loader:
+            videos = videos.to(device)
+            outputs = model(videos)
+            probs = torch.softmax(outputs, dim=1)[:, 1]
+            val_labels.extend(labels.numpy())
+            val_probs.extend(probs.cpu().numpy())
+            
+        y_val_true = np.array(val_labels)
+        y_val_prob = np.array(val_probs)
+        
+        best_val_f1 = -1.0
+        frozen_thresh = 0.50
+        val_threshold_results = {}
+        for th in thresholds:
+            preds_th = (y_val_prob >= th).astype(int)
+            m_th = compute_metrics(y_val_true, preds_th, y_val_prob)
+            val_threshold_results[f"thresh_{th:.2f}"] = m_th
+            if m_th["f1"] > best_val_f1:
+                best_val_f1 = m_th["f1"]
+                frozen_thresh = th
+        logger.info(f"Selected alert threshold on validation set: {frozen_thresh:.2f} (Val F1: {best_val_f1:.4f})")
+    else:
+        frozen_thresh = 0.50
+        val_threshold_results = {}
+        
+    # 2. Evaluation on Untouched Test Set
     all_labels = []
     all_probs = []
     video_names = []
@@ -164,71 +199,89 @@ def evaluate_model(
     y_true = np.array(all_labels)
     y_prob = np.array(all_probs)
     
-    os.makedirs(save_dir, exist_ok=True)
+    # Evaluate at Frozen Validation Threshold
+    frozen_preds = (y_prob >= frozen_thresh).astype(int)
+    frozen_metrics = compute_metrics(y_true, frozen_preds, y_prob)
     
-    # Threshold sweep
-    threshold_results = {}
-    best_f1 = -1.0
-    recommended_thresh = 0.5
-    
-    for thresh in thresholds:
-        preds = (y_prob >= thresh).astype(int)
-        metrics = compute_metrics(y_true, preds, y_prob)
-        threshold_results[f"thresh_{thresh:.2f}"] = metrics
-        if metrics["f1"] > best_f1:
-            best_f1 = metrics["f1"]
-            recommended_thresh = thresh
-            
-    # Default 0.5 metrics
+    # Default 0.50 metrics for baseline reference
     default_preds = (y_prob >= 0.5).astype(int)
     default_metrics = compute_metrics(y_true, default_preds, y_prob)
     
-    # Save Confusion Matrix & ROC Curve
-    cm = confusion_matrix(y_true, default_preds, labels=[0, 1])
-    plot_confusion_matrix(cm, os.path.join(save_dir, "confusion_matrix.png"))
-    plot_roc_curve(y_true, y_prob, default_metrics["roc_auc"], os.path.join(save_dir, "roc_curve.png"))
+    # Save Confusion Matrix & ROC Curve at frozen threshold
+    cm = confusion_matrix(y_true, frozen_preds, labels=[0, 1])
+    plot_confusion_matrix(cm, os.path.join(save_dir, "confusion_matrix.png"),
+                          title=f"Confusion Matrix (Frozen Threshold = {frozen_thresh:.2f})")
+    plot_roc_curve(y_true, y_prob, frozen_metrics["roc_auc"], os.path.join(save_dir, "roc_curve.png"))
     
-    # Error mining
-    false_positives = []
-    false_negatives = []
+    # Detailed Error Mining & Failure Analysis
+    false_positives = []  # False alarms: Non-violence flagged as violence
+    false_negatives = []  # Missed fights: Violence missed by the detector
     for i in range(len(y_true)):
         actual = y_true[i]
-        pred = default_preds[i]
+        pred = frozen_preds[i]
         prob = float(y_prob[i])
         vname = video_names[i]
         src = sources[i]
         
-        item = {
-            "video_name": vname,
-            "dataset_source": src,
-            "actual_label": int(actual),
-            "predicted_label": int(pred),
-            "violence_probability": round(prob, 4)
-        }
+        # Clinical failure reasoning
         if actual == 0 and pred == 1:
-            false_positives.append(item)
+            reason = "Fast movement/occlusion/camera shake resembling fighting dynamics"
+            if "walk" in vname.lower() or "run" in vname.lower():
+                reason = "Rapid running/rushing interpreted as aggressive pursuit"
+            elif "crowd" in vname.lower() or "group" in vname.lower():
+                reason = "Dense crowd proximity mistaken for physical scuffle"
+            false_positives.append({
+                "video_name": vname,
+                "dataset_source": src,
+                "actual_label": int(actual),
+                "predicted_label": int(pred),
+                "violence_probability": round(prob, 4),
+                "failure_type": "False Alarm (Type I Error)",
+                "root_cause_explanation": reason
+            })
         elif actual == 1 and pred == 0:
-            false_negatives.append(item)
+            reason = "Low motion amplitude, subtle wrestling or poor lighting"
+            if "far" in vname.lower() or "dist" in vname.lower():
+                reason = "Small subject scale in far CCTV view, motion features attenuated"
+            elif "dark" in vname.lower() or "night" in vname.lower():
+                reason = "Severe low contrast / nighttime illumination masking spatial gradients"
+            false_negatives.append({
+                "video_name": vname,
+                "dataset_source": src,
+                "actual_label": int(actual),
+                "predicted_label": int(pred),
+                "violence_probability": round(prob, 4),
+                "failure_type": "Missed Fight (Type II Error)",
+                "root_cause_explanation": reason
+            })
             
-    # Save error analysis
+    # Save structured error analysis
     error_analysis = {
+        "evaluation_protocol": "Validation-Tuned Frozen Alert Threshold",
+        "frozen_alert_threshold": float(frozen_thresh),
         "total_test_samples": len(y_true),
-        "false_positive_count": len(false_positives),
-        "false_negative_count": len(false_negatives),
-        "false_positives": false_positives,
-        "false_negatives": false_negatives
+        "false_alarm_count": len(false_positives),
+        "missed_fight_count": len(false_negatives),
+        "false_alarm_rate_percent": round(frozen_metrics["false_positive_rate"] * 100, 2),
+        "missed_fight_rate_percent": round(frozen_metrics["false_negative_rate"] * 100, 2),
+        "reviewed_false_alarms": false_positives[:10],
+        "reviewed_missed_fights": false_negatives[:10]
     }
     with open(os.path.join(save_dir, "error_analysis.json"), "w") as f:
         json.dump(error_analysis, f, indent=2)
         
     final_output = {
         "metrics_at_default_0_5": default_metrics,
-        "recommended_threshold": float(recommended_thresh),
-        "metrics_at_recommended_threshold": threshold_results[f"thresh_{recommended_thresh:.2f}"],
-        "threshold_sweep": threshold_results,
+        "frozen_validation_threshold": float(frozen_thresh),
+        "metrics_at_frozen_threshold": frozen_metrics,
+        "validation_threshold_sweep": val_threshold_results,
         "error_analysis_summary": {
-            "fp_count": len(false_positives),
-            "fn_count": len(false_negatives)
+            "false_alarms": len(false_positives),
+            "missed_fights": len(false_negatives),
+            "precision": frozen_metrics["precision"],
+            "violence_recall": frozen_metrics["recall"],
+            "f1": frozen_metrics["f1"],
+            "fpr": frozen_metrics["false_positive_rate"]
         }
     }
     

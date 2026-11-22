@@ -312,13 +312,30 @@ def build_dataloaders(
             f"{data_root}/{ds_name}/NonViolence/*.avi"
         )
     
-    # Check if pre-split directories exist (train/val/test)
-    has_presplit = any(
-        os.path.isdir(os.path.join(data_root, ds_name, split))
-        for split in ["train", "val", "test", "Train", "Val", "Test"]
-    )
-    
-    if has_presplit:
+    # Check if pre-split manifest files exist in splits/ directory
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    splits_dir = os.path.join(project_root, "splits")
+    manifest_train = os.path.join(splits_dir, f"{ds_name}_train.txt")
+    manifest_val = os.path.join(splits_dir, f"{ds_name}_val.txt")
+    manifest_test = os.path.join(splits_dir, f"{ds_name}_test.txt")
+
+    if os.path.isfile(manifest_train) and os.path.isfile(manifest_val) and os.path.isfile(manifest_test):
+        logger.info(f"Loading official verified split manifests from {splits_dir}/ for {ds_name}...")
+        splits = {}
+        for sname, mpath in [("train", manifest_train), ("val", manifest_val), ("test", manifest_test)]:
+            with open(mpath, "r") as mf:
+                m_paths = [line.strip() for line in mf if line.strip()]
+            m_labels = []
+            m_sources = []
+            for mp in m_paths:
+                p_lower = mp.lower()
+                if "non" in p_lower:
+                    m_labels.append(0)
+                else:
+                    m_labels.append(1)
+                m_sources.append(ds_name)
+            splits[sname] = (m_paths, m_labels, m_sources)
+    elif has_presplit:
         # Use existing splits
         splits = {}
         for split_name in ["train", "val", "test"]:

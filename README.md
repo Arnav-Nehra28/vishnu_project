@@ -152,3 +152,4 @@ It includes mathematical formulations, training dynamics, ROC curves, confusion 
 - **Arnav Nehra** — Team Lead & Project Architecture
 - **Arpit** — Downstream Edge Optimization, ONNX/TensorRT & Android Integration Lead
 - **Savitoj** — Dataset Sourcing & Preparation Support
+

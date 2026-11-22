@@ -174,9 +174,6 @@ class Trainer:
             "history": self.history,
         }
         
-        path = os.path.join(self.experiment_dir, f"checkpoint_epoch_{epoch:03d}.pth")
-        torch.save(checkpoint, path)
-        
         if is_best:
             best_path = os.path.join(self.experiment_dir, "best_model.pth")
             torch.save(checkpoint, best_path)

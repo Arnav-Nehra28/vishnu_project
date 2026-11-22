@@ -41,7 +41,7 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     
     print(f"Building data loader for: {ds_name}...")
-    _, _, test_loader, info = build_dataloaders(config)
+    _, val_loader, test_loader, info = build_dataloaders(config)
     
     print(f"Instantiating model: {model_name}...")
     model = build_model(config)
@@ -49,19 +49,20 @@ def main():
     model.to(device)
     model.eval()
     
-    print(f"Evaluating on {info['test_count']} test videos...")
-    results = evaluate_model(model, test_loader, device, out_dir)
+    print(f"Evaluating on {info['test_count']} test videos using validation-tuned frozen threshold...")
+    results = evaluate_model(model, test_loader, device, out_dir, val_loader=val_loader)
     
-    m = results["metrics_at_default_0_5"]
+    m_frozen = results.get("metrics_at_frozen_threshold", results["metrics_at_default_0_5"])
+    frozen_th = results.get("frozen_validation_threshold", 0.50)
     print(f"\n========================================================")
     print(f"EVALUATION SUMMARY ({ds_name.upper()} - {model_name.upper()}):")
-    print(f"  Accuracy:  {m['accuracy']*100:.2f}%")
-    print(f"  Precision: {m['precision']*100:.2f}%")
-    print(f"  Recall:    {m['recall']*100:.2f}% (Violence Sensitivity)")
-    print(f"  F1-Score:  {m['f1']*100:.2f}%")
-    print(f"  ROC-AUC:   {m['roc_auc']:.4f}")
-    print(f"  FP: {m['false_positives']} | FN: {m['false_negatives']}")
-    print(f"Recommended Threshold: {results['recommended_threshold']:.2f}")
+    print(f"  Alert Threshold (Frozen from Val): {frozen_th:.2f}")
+    print(f"  Accuracy:  {m_frozen['accuracy']*100:.2f}%")
+    print(f"  Precision: {m_frozen['precision']*100:.2f}%")
+    print(f"  Recall:    {m_frozen['recall']*100:.2f}% (Violence Sensitivity)")
+    print(f"  F1-Score:  {m_frozen['f1']*100:.2f}%")
+    print(f"  ROC-AUC:   {m_frozen['roc_auc']:.4f}")
+    print(f"  False Alarms (FP): {m_frozen['false_positives']} | Missed Fights (FN): {m_frozen['false_negatives']}")
     print(f"Artifacts saved to: {out_dir}/")
     print(f"========================================================\n")
 
